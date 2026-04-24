@@ -288,3 +288,159 @@ Let's see the truth!
 Now that you have the Cheat Sheet, it is time to diagnose our actual model.
 
 Please go back to the previous code block I provided (the one defining the print_metrics function). Run it, look at the printout, and use your Cheat Sheet rules above to tell me: Does our model have Underfitting, Overfitting, or is it in the Goldilocks zone?
+
+
+
+
+
+
+Your instinct to be suspicious of these terrible numbers is exactly right!
+
+But let's look at the diagnosis a bit closer using our mentor cheat sheet.
+
+You said Underfitting, and you are half right: scoring only 0.47 (47%) on the Practice Test means the model is definitely struggling to grasp the core concepts.
+
+However, the real smoking gun is the difference between the two tests:
+
+Practice Test Score: 0.47 (A failing grade, but it learned something).
+Final Exam Score: -0.77 (A negative score! It literally did worse than predicting the exact average profit for every single row).
+Because the score plummeted so catastrophically from the Training set to the Test set, the primary disease our model has right now is Severe Overfitting.
+
+Why did this happen? Standard Linear Regression is like a wild, untrained puppy. It tries incredibly hard to connect all the dots, even the weird outliers. We gave it 48 different features (all those Dummy variables for Categories, States, etc.). It desperately assigned massive mathematical weights to some of those random features to force the Practice Test to work, but when it saw new data in the Final Exam, those massively weighted, memorized features caused the predictions to blow up completely (hence the negative score).
+
+🗺️ Next Step: Phase 5 - Controlling the Beast (Regularization)
+Our Baseline Standard Linear Regression model failed. It has too much freedom to make crazy guesses based on 48 features.
+
+We need to put the puppy on a leash. This mathematical leash is called Regularization. It literally penalizes the model for having excessively large coefficients (weights).
+
+We will try two leashes:
+
+Ridge Regression (L2 Penalty): It shrinks all feature weights down closer to zero. It says to the model, "You can use all 48 features, but you aren't allowed to rely too heavily on any single one."
+Lasso Regression (L1 Penalty): It is much harsher. It also shrinks weights to zero, but it actually forces some weights to become exactly zero. It says to the model, "Half of these 48 features are garbage. I'm deleting them. You can only use the most important ones."
+💻 Your Turn: Applying the Leash
+Create a new cell, paste this code, and run it. We will train both Ridge and Lasso, predict the test data, and immediately print their Final Exam scores to compare against our failed Baseline!
+
+python
+from sklearn.linear_model import Ridge, Lasso
+# --- 1. RIDGE REGRESSION ---
+# alpha is how tight we pull the leash. Higher alpha = tighter leash.
+ridge_model = Ridge(alpha=10.0) 
+ridge_model.fit(X_train, y_train)
+# Predict and Score
+y_pred_ridge_test = ridge_model.predict(X_test)
+r2_ridge_test = r2_score(y_test, y_pred_ridge_test)
+# --- 2. LASSO REGRESSION ---
+lasso_model = Lasso(alpha=0.1)
+lasso_model.fit(X_train, y_train)
+# Predict and Score
+y_pred_lasso_test = lasso_model.predict(X_test)
+r2_lasso_test = r2_score(y_test, y_pred_lasso_test)
+# --- SUMMARY ---
+print("--- FINAL EXAM SCORES (TESTING DATA) ---")
+print(f"Wild Puppy Baseline R2:  {-0.77}") # Hardcoded from your results
+print(f"Ridge (Gentle Leash) R2: {r2_ridge_test:.2f}")
+print(f"Lasso (Strict Leash) R2: {r2_lasso_test:.2f}")
+🧠 Your Mentor Question:
+Run the code! Did putting a leash on the model (Ridge and Lasso) fix the catastrophic negative score we saw in the Baseline? Did one leash perform significantly better than the other?
+
+
+Welcome to the real world of Data Science! As a mentor, I actually smiled when I saw your result. Why? Because you just hit the exact wall that separates a Junior dev who gives up, from a Senior who pivots.
+
+You applied the mathematical leashes perfectly. But as you saw, they completely failed.
+
+What does this catastrophic failure tell us? It tells us that our problem wasn't just "overfitting." The problem is our foundational assumption. Linear Regression strictly assumes that profit follows a neat, straight-line relationship: $y = mx + b$.
+
+But think about retail in the real world: Profit isn't linear; it's conditional.
+
+If a customer buys a $1000 computer, and the discount is > 30%, then we take a massive loss.
+If we sell 5 pencils, and the discount is 0%, then we make a tiny profit.
+A Linear Regression model fails spectacularly trying to draw a straight line through those complex "If/Then" relationships. Additionally, those massive extreme outliers we saw in Phase 1 (profits of +$8000 and losses of -$6000) are totally breaking the linear math curve.
+
+How Do We Win This? The Pivot ⚔️
+If our data is basically a bunch of complex "If/Then" rules, we should use a model designed to learn "If/Then" rules.
+
+Enter the Random Forest.
+
+Instead of trying to draw one perfectly straight line, a Random Forest builds an army of hundreds of "Decision Trees". Each tree asks a series of yes/no questions (e.g., Is Discount > 20%? Is Sales > $50?). It averages the guesses of all the trees together. It naturally handles extreme outliers and captures non-linear relationships effortlessly.
+
+💻 Your Turn: Unleashing the Forest
+Let's ditch the straight line and plant a forest. Create a new cell, paste this code, and brace yourself.
+
+python
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score # Just in case it wasn't carried over
+# 1. Initialize the Random Forest (We use default settings for now)
+rf_model = RandomForestRegressor(random_state=42)
+# 2. Train the model (This might take 3-5 seconds, it's building 100 trees!)
+rf_model.fit(X_train, y_train)
+# 3. Predict on BOTH train (practice) and test (final exam)
+y_pred_rf_train = rf_model.predict(X_train)
+y_pred_rf_test = rf_model.predict(X_test)
+# 4. Score them
+r2_rf_train = r2_score(y_train, y_pred_rf_train)
+r2_rf_test = r2_score(y_test, y_pred_rf_test)
+print("--- RANDOM FOREST (THE PIVOT) ---")
+print(f"Practice Test (Train) R2: {r2_rf_train:.2f}")
+print(f"Final Exam (Test) R2:     {r2_rf_test:.2f}")
+🧠 Your Mentor Question:
+Run it and look at those two numbers.
+
+Did we finally escape the negative score on the Final Exam?
+Does the Random Forest show signs of Overfitting (huge gap between Train and Test), or is it in the Goldilocks zone?
+
+
+
+Great memory! Yes, I did mention that, and it's one of the coolest superpowers of the Lasso Regression model.
+
+While Ridge shrinks all weights down slightly, Lasso aggressively forces the weights of useless features to exactly 0.0. It acts like an automatic feature selector.
+
+💻 Your Turn: Inspecting the Lasso
+Let's look inside the Lasso model you just trained to see exactly which features it kept and which ones it decided were completely useless.
+
+Create a new cell, paste this code, and run it:
+
+python
+import pandas as pd
+# 1. Grab the names of all 48 of our features
+feature_names = X_train.columns
+# 2. Grab the final weights (coefficients) the Lasso model assigned to them
+lasso_weights = lasso_model.coef_
+# 3. Create a nice DataFrame to view them side-by-side
+lasso_df = pd.DataFrame({
+    'Feature_Name': feature_names,
+    'Weight': lasso_weights
+})
+# 4. Find the features Lasso "killed" (Weight exactly 0.0)
+dead_features = lasso_df[lasso_df['Weight'] == 0.0]
+# 5. Find the features Lasso kept (Weight NOT 0.0), sorted by importance
+surviving_features = lasso_df[lasso_df['Weight'] != 0.0].copy()
+# We look at the absolute value to see the overall impact (strong positive OR strong negative)
+surviving_features['Absolute_Impact'] = abs(surviving_features['Weight'])
+surviving_features = surviving_features.sort_values(by='Absolute_Impact', ascending=False)
+print(f"Out of {len(feature_names)} original features, Lasso killed {len(dead_features)} of them!")
+print("\n--- The Most Powerful Features Lasso Kept ---")
+print(surviving_features[['Feature_Name', 'Weight']].head(10))
+🧠 Your Mentor Question:
+How many features did Lasso decide were completely useless and delete?
+Look at the top survivors. Are you surprised by any of the features that have the biggest impact on Profit?
+(Once we see what Lasso did, let's make sure you still run that Random Forest code I provided in the previous message, as that is our actual ticket to getting a good score!)
+
+
+Yes, exactly! It is 100% automatic.
+
+To understand how it's automatic, think about the simple math of how any Linear Regression model makes a prediction.
+
+The formula for predicting Profit looks like this: Predicted Profit = (Weight_1 * Sales) + (Weight_2 * Quantity) + (Weight_3 * Discount) ...
+
+During training, Lasso looks at a feature (let's pretend it's the state of Wyoming) and realizes, "This feature is just adding noise, it doesn't help me predict profit at all." Because of the "L1 Penalty" math built into Lasso, it takes the weight for Wyoming and forces it down to exactly 0.0.
+
+So, when predicting future data, the math looks like this: ... + (0.0 * Wyoming) + ...
+
+Because anything multiplied by zero is zero, that feature literally vanishes from the mathematical equation! It is permanently ignored for all future predictions.
+
+This is why Lasso is extremely popular in the medical field (e.g., if you have data on 10,000 human genes, Lasso will automatically delete the 9,900 genes that don't cause the disease, leaving you with only the important ones).
+
+Ready to level up? 🌲
+Lasso is awesome for interpreting our data, but remember, our test scores were still terrible! Linear models just can't handle the shape of this specific dataset.
+
+Are you ready to run the Random Forest code I provided two messages ago? Let's plant that forest and see if we can finally get a good score on the Final Exam!
